@@ -1,0 +1,29 @@
+---
+- name: Deploy AutoDeploy Application
+  hosts: localhost
+  connection: local
+
+  tasks:
+
+    - name: Stop existing application container
+      community.docker.docker_container:
+        name: autodeploy-demo-app
+        state: absent
+
+    - name: Start application container
+      community.docker.docker_container:
+        name: autodeploy-demo-app
+        image: autodeploy-demo-app:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "8081:{{ container_port | default(80) }}"
+
+    - name: Verify application container
+      community.docker.docker_container_info:
+        name: autodeploy-demo-app
+      register: container_info
+
+    - name: Show deployment status
+      debug:
+        msg: "Application container is running: {{ container_info.container.State.Running }}"

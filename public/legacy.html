@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AutoDeploy Platform</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<style>:root{color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{background:#080b14;color:#e2e8f0;font-family:Inter,ui-sans-serif,system-ui,sans-serif}.mono{font-family:ui-monospace,Menlo,Consolas,monospace}.bg-g{background:radial-gradient(900px 400px at 80% -10%,#4f46e522,transparent),radial-gradient(700px 300px at 0% 0%,#0ea5e91a,transparent)}</style>
+</head><body><div id="root"></div>
+<script>
+const {useState,useEffect,useRef,useContext,createContext}=React;const h=htm.bind(React.createElement);const Ctx=createContext();
+const go=p=>location.hash=p;
+const SC={success:'text-emerald-400 bg-emerald-400/10 border-emerald-400/30',online:'text-emerald-400 bg-emerald-400/10 border-emerald-400/30',failed:'text-red-400 bg-red-400/10 border-red-400/30',offline:'text-red-400 bg-red-400/10 border-red-400/30',running:'text-sky-400 bg-sky-400/10 border-sky-400/30',pending:'text-amber-400 bg-amber-400/10 border-amber-400/30',stopped:'text-slate-400 bg-slate-400/10 border-slate-400/30'};
+const P=[{id:'p1',name:'my-portfolio',repo:'github.com/dev/my-portfolio',branch:'main',st:'running',ver:'v1.4',commit:'a3f9c21',img:'registry.io/dev/my-portfolio:1.4',srv:'Server-01',cpu:12,mem:34,up:'6d 4h',url:'https://my-portfolio.autodeploy.app'},
+{id:'p2',name:'e-commerce',repo:'github.com/dev/e-commerce',branch:'main',st:'failed',ver:'v2.1',commit:'7be01d4',img:'registry.io/dev/e-commerce:2.0',srv:'Server-02',cpu:0,mem:0,up:'—',url:'#'},
+{id:'p3',name:'flask-api',repo:'github.com/dev/flask-api',branch:'develop',st:'running',ver:'v3.0',commit:'c94d8aa',img:'registry.io/dev/flask-api:3.0',srv:'Server-01',cpu:47,mem:61,up:'1h 12m',url:'https://flask-api.autodeploy.app'}];
+const D=[['d-1042','my-portfolio','main','success','v1.4','a3f9c21','1m 24s','2 min ago'],['d-1041','e-commerce','main','failed','v2.1','7be01d4','48s','20 min ago'],['d-1040','flask-api','develop','running','v3.0','c94d8aa','1m 02s','1 hr ago'],['d-1039','my-portfolio','main','success','v1.3','91ac3e0','1m 31s','1 day ago'],['d-1038','flask-api','main','success','v2.9','5d2f7b8','1m 12s','2 days ago'],['d-1037','e-commerce','develop','failed','v2.0','0ff1b92','39s','3 days ago']].map(a=>({id:a[0],p:a[1],b:a[2],s:a[3],v:a[4],c:a[5],d:a[6],t:a[7]}));
+const SV=[{n:'Server-01',s:'online',ip:'192.168.1.20',os:'Ubuntu 22.04',cpu:32,ram:61,c:[['frontend','myapp:latest','running'],['backend','api:v1.4','running'],['database','postgres:16','running']]},{n:'Server-02',s:'online',ip:'192.168.1.21',os:'Ubuntu 22.04',cpu:78,ram:83,c:[['shop-web','e-commerce:2.0','running'],['redis','redis:7','running']]},{n:'Server-03',s:'offline',ip:'192.168.1.22',os:'Debian 12',cpu:0,ram:0,c:[]}];
+const NT=[['success','Deployment successful','my-portfolio v1.4 is now live.'],['warn','Security warning','3 medium vulnerabilities detected in e-commerce.'],['failed','Deployment failed','e-commerce v2.1 failed at Docker Build.'],['failed','Server offline','Server-03 stopped responding.'],['warn','Application unhealthy','flask-api health check slow (2.4s).']];
+const ST=[['GitHub Checkout','⎇',4],['Testing','🧪',12],['Docker Build','🐳',32],['Security Scan','🛡',8],['Docker Push','⬆',15],['Ansible Deployment','⚙',20],['Health Check','♥',5],['Application Live','🌐',1]];
+const LG=[[['info','Cloning repository...'],['info','Repository cloned successfully.']],[['info','Running tests...'],['info','Tests passed (42/42).']],[['info','Building Docker image...'],['info','Docker image created.']],[['info','Running security scan...'],['warn','3 medium vulnerabilities found (no critical).']],[['info','Pushing image to registry...'],['info','Image pushed successfully.']],[['info','Starting Ansible deployment...'],['info','Container started successfully.']],[['info','Running health check...'],['info','Health check passed.']],[['info','Application is live at https://my-app.autodeploy.app']]];
+const CHAIN=['GitHub','FastAPI','Jenkins','Docker','Registry','Ansible','Linux Server','Application'];
+const Badge=({s,l})=>h`<span className=${'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs capitalize '+(SC[s]||SC.pending)}><i className=${'w-1.5 h-1.5 rounded-full bg-current '+(s=='running'?'animate-pulse':'')}></i>${l||s}</span>`;
+const Card=({c='',children})=>h`<div className=${'rounded-xl border border-slate-800 bg-slate-900/60 p-4 '+c}>${children}</div>`;
+const Btn=({v='p',c='',...r})=>h`<button ...${r} className=${'px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-40 '+({p:'bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white',g:'border border-slate-700 hover:bg-slate-800 text-slate-200',d:'border border-red-500/40 text-red-400 hover:bg-red-500/10'}[v])+' '+c}/>`;
+const In=({label,...r})=>h`<label className="block text-sm text-slate-400">${label}<input ...${r} className="mt-1 w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"/></label>`;
+const Sel=({label,opts,...r})=>h`<label className="block text-sm text-slate-400">${label}<select ...${r} className="mt-1 w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-sm">${opts.map(o=>h`<option key=${o}>${o}</option>`)}</select></label>`;
+const Bar=({v})=>h`<div className="h-1.5 rounded bg-slate-800 overflow-hidden"><div className=${'h-full '+(v>75?'bg-red-400':v>55?'bg-amber-400':'bg-emerald-400')} style=${{width:v+'%'}}></div></div>`;
+const Chain=()=>h`<div className="flex flex-wrap items-center gap-1 text-xs text-slate-400">${CHAIN.map((c,i)=>h`<span key=${c} className="flex items-center gap-1"><span className="px-2 py-1 rounded-md bg-slate-800/80 border border-slate-700">${c}</span>${i<7&&h`<span className="text-indigo-400">→</span>`}</span>`)}</div>`;
+const Empty=({t})=>h`<div className="text-center py-10 text-slate-500 text-sm">∅ ${t}</div>`;
+
+function Auth({mode}){const{toast}=useContext(Ctx);const su=mode=='signup';const[e,setE]=useState('');
+const sub=ev=>{ev.preventDefault();const f=new FormData(ev.target);if(su&&f.get('pw')!=f.get('pw2'))return setE('Passwords do not match');if(String(f.get('pw')).length<6)return setE('Password must be at least 6 characters');localStorage.getItem;toast('Welcome to AutoDeploy','success');go('/')};
+return h`<div className="min-h-screen bg-g flex items-center justify-center p-4"><div className="w-full max-w-md space-y-5"><div className="text-center"><div className="text-3xl font-bold">🚀 Auto<span className="text-indigo-400">Deploy</span></div><p className="text-slate-400 text-sm mt-1">Push to GitHub. We ship it.</p></div>
+<${Card} c="p-6"><form onSubmit=${sub} className="space-y-4"><h1 className="text-lg font-semibold">${su?'Create your account':'Log in'}</h1>
+${su&&h`<${In} label="Name" name="n" required/>`}<${In} label="Email" name="em" type="email" required/><${In} label="Password" name="pw" type="password" required/>
+${su&&h`<${In} label="Confirm password" name="pw2" type="password" required/>`}
+${e&&h`<p className="text-sm text-red-400">⚠ ${e}</p>`}
+${!su&&h`<label className="flex items-center gap-2 text-sm text-slate-400"><input type="checkbox" defaultChecked/> Remember me</label>`}
+<${Btn} c="w-full py-2">${su?'Create Account':'Login'}<//>
+<${Btn} v="g" type="button" c="w-full py-2" onClick=${()=>{toast('Signed in with GitHub','success');go('/')}}>⌥ Continue with GitHub<//>
+<p className="text-sm text-center text-slate-400">${su?'Have an account? ':'New here? '}<a className="text-indigo-400" href=${su?'#/login':'#/signup'}>${su?'Log in':'Sign Up'}</a></p></form><//>
+<${Chain}/></div></div>`}
+
+function Nav({path}){const{notes,setNotes}=useContext(Ctx);const[o,setO]=useState(false);const[m,setM]=useState(false);
+const L=[['Dashboard','/'],['Projects','/projects'],['Deployments','/deployments'],['Servers','/servers'],['Settings','/settings']];
+return h`<header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/90 backdrop-blur"><div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-4">
+<a href="#/" className="font-bold">🚀 Auto<span className="text-indigo-400">Deploy</span></a>
+<nav className=${(m?'flex absolute top-14 left-0 right-0 flex-col bg-slate-950 p-3 border-b border-slate-800':'hidden')+' md:flex md:static md:flex-row md:p-0 md:border-0 gap-1 text-sm'}>${L.map(([n,p])=>h`<a key=${p} href=${'#'+p} onClick=${()=>setM(false)} className=${'px-3 py-1.5 rounded-lg '+((p=='/'?path=='/':path.startsWith(p))?'bg-indigo-500/15 text-indigo-300':'text-slate-400 hover:text-white')}>${n}</a>`)}</nav>
+<div className="ml-auto flex items-center gap-2 relative"><button onClick=${()=>{setO(!o)}} className="relative px-2 py-1 rounded-lg hover:bg-slate-800">🔔${notes.length>0&&h`<span className="absolute -top-1 -right-1 text-[10px] bg-red-500 rounded-full px-1">${notes.length}</span>`}</button>
+${o&&h`<div className="absolute right-0 top-10 w-72 max-w-[85vw] rounded-xl border border-slate-800 bg-slate-900 p-2 shadow-xl"><div className="flex justify-between px-2 py-1 text-xs text-slate-400">Notifications<button onClick=${()=>setNotes([])} className="text-indigo-400">Clear</button></div>${notes.length?notes.map((n,i)=>h`<div key=${i} className="p-2 rounded-lg hover:bg-slate-800 text-sm"><div className=${n[0]=='success'?'text-emerald-400':n[0]=='warn'?'text-amber-400':'text-red-400'}>${n[0]=='success'?'✓':n[0]=='warn'?'⚠':'✕'} ${n[1]}</div><div className="text-xs text-slate-400">${n[2]}</div></div>`):h`<${Empty} t="You're all caught up"/>`}</div>`}
+<a href="#/settings" className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-sm font-semibold">D</a>
+<button className="md:hidden px-2" onClick=${()=>setM(!m)}>☰</button></div></div></header>`}
+
+function Dash(){const[l,setL]=useState(true);useEffect(()=>{const t=setTimeout(()=>setL(false),600);return()=>clearTimeout(t)},[]);
+const S=[['Total Projects',3,''],['Total Deployments',128,''],['Successful',114,'text-emerald-400'],['Failed',14,'text-red-400'],['Running Apps',2,'text-sky-400']];
+return h`<div className="space-y-6"><div className="flex flex-wrap justify-between gap-3 items-center"><div><h1 className="text-2xl font-semibold">Dashboard</h1><p className="text-sm text-slate-400">Your deployment pipeline at a glance.</p></div><${Btn} onClick=${()=>go('/deploy')}>＋ New Deployment<//></div>
+<${Card}><div className="text-xs text-slate-500 mb-2">Automation pipeline</div><${Chain}/><//>
+<div className="grid grid-cols-2 md:grid-cols-5 gap-3">${S.map(([n,v,c])=>h`<${Card} key=${n}><div className="text-xs text-slate-400">${n}</div>${l?h`<div className="h-8 mt-1 rounded bg-slate-800 animate-pulse"></div>`:h`<div className=${'text-3xl font-semibold '+c}>${v}</div>`}<//>`)}</div>
+<${Card}><h2 className="font-medium mb-3">Recent Deployments</h2><${DTable} rows=${D.slice(0,3)}/><//></div>`}
+
+function DTable({rows,full}){const{toast}=useContext(Ctx);if(!rows.length)return h`<${Empty} t="No deployments match your filters"/>`;
+return h`<div className="overflow-x-auto"><table className="w-full text-sm min-w-[640px]"><thead className="text-left text-xs text-slate-500"><tr>${(full?['ID','Project','Commit','Branch','Status','Version','Duration','Date','Action']:['Project','Branch','Status','Version','Time','Action']).map(c=>h`<th key=${c} className="pb-2 font-normal">${c}</th>`)}</tr></thead><tbody>${rows.map(r=>h`<tr key=${r.id} className="border-t border-slate-800/80"><td className="py-2.5">${full?h`<span className="mono text-slate-400">${r.id}</span>`:r.p}</td>${full&&h`<td>${r.p}</td><td className="mono text-slate-400">${r.c}</td>`}<td className="mono text-slate-400">${r.b}</td><td><${Badge} s=${r.s} l=${r.s=='success'?'Success':r.s}/></td><td>${r.v}</td>${full&&h`<td>${r.d}</td>`}<td className="text-slate-400">${r.t}</td><td><a className="text-indigo-400 hover:underline" href=${r.s=='running'?'#/pipeline/live':'#/pipeline/'+r.id}>${r.s=='failed'?'Logs':'View'}</a></td></tr>`)}</tbody></table></div>`}
+
+function Deploy() {
+  const { toast } = useContext(Ctx);
+
+  const [ev, setEv] = useState([
+    ['NODE_ENV', 'production']
+  ]);
+
+  const [k, setK] = useState('');
+  const [v, setV] = useState('');
+  const [er, setEr] = useState({});
+  const [sv, setSv] = useState('Server-01 — Online');
+
+  const sub = async e => {
+    e.preventDefault();
+
+    // Read values from the deployment form
+    const f = new FormData(e.target);
+
+    const repository = f.get('repo');
+    const branch = f.get('branch') || 'main';
+    const application_type =
+      f.get('application_type') || 'Auto Detect';
+    const port =
+      Number(f.get('application_port')) || 8080;
+
+    // Validation
+    const x = {};
+
+    if (
+      !/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/.test(repository)
+    ) {
+      x.repo =
+        'Enter a valid GitHub URL, e.g. https://github.com/username/project';
+    }
+
+    if (sv.includes('Offline')) {
+      x.sv = 'Selected server is offline';
+    }
+
+    setEr(x);
+
+    if (Object.keys(x).length) {
+      toast('Fix the highlighted fields', 'error');
+      return;
+    }
+
+    // Send request to FastAPI
+    try {
+      toast('Sending deployment request...', 'success');
+
+      const response = await fetch(
+        'http://127.0.0.1:8000/deploy',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json'
+          },
+
+          body: JSON.stringify({
+            repository: repository,
+            branch: branch,
+            application_type: application_type,
+            port: port
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      console.log('FastAPI response:', data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail || 'Deployment request failed'
+        );
+      }
+
+      // FastAPI successfully received the request
+      toast(
+        'Deployment request received by FastAPI!',
+        'success'
+      );
+
+      // Go to pipeline page
+      go('/pipeline/new');
+
+    } catch (error) {
+      console.error('Deployment error:', error);
+
+      toast(
+        'Could not connect to FastAPI',
+        'error'
+      );
+    }
+  };
+
+  return h`
+    <form
+      onSubmit=${sub}
+      className="max-w-2xl mx-auto space-y-4"
+    >
+
+      <div>
+        <h1 className="text-2xl font-semibold">
+          Create New Deployment
+        </h1>
+
+        <p className="text-sm text-slate-400 mt-1">
+          Configure your application and start a deployment.
+        </p>
+      </div>
+
+
+      <!-- Repository -->
+
+      <${Card} c="space-y-4">
+
+        <h2 className="font-medium">
+          Repository
+        </h2>
+
+        <div>
+
+          <${In}
+            label="GitHub Repository"
+            name="repo"
+            type="url"
+            required
+            placeholder="https://github.com/username/project"
+            defaultValue="https://github.com/dev/my-portfolio"
+          />
+
+          ${
+            er.repo &&
+            h`
+              <p className="text-xs text-red-400 mt-1">
+                ⚠ ${er.repo}
+              </p>
+            `
+          }
+
+        </div>
+
+
+        <div className="grid sm:grid-cols-2 gap-4">
+
+          <${Sel}
+            label="Branch"
+            name="branch"
+            opts=${[
+              'main',
+              'develop',
+              'feature'
+            ]}
+          />
+
+
+          <${Sel}
+            label="Application Type"
+            name="application_type"
+            opts=${[
+              'Auto Detect',
+              'React',
+              'Node.js',
+              'Python',
+              'FastAPI',
+              'Docker'
+            ]}
+          />
+
+        </div>
+
+      <//>
+
+
+      <!-- Docker Configuration -->
+
+      <${Card} c="space-y-4">
+
+        <h2 className="font-medium">
+          Docker Configuration
+        </h2>
+
+
+        <div className="grid sm:grid-cols-3 gap-4">
+
+          <${In}
+            label="Dockerfile path"
+            name="dockerfile_path"
+            defaultValue="./Dockerfile"
+          />
+
+
+          <${In}
+            label="Application port"
+            name="application_port"
+            type="number"
+            defaultValue="8080"
+          />
+
+
+          <${In}
+            label="Container port"
+            name="container_port"
+            type="number"
+            defaultValue="3000"
+          />
+
+        </div>
+
+      <//>
+
+
+      <!-- Environment Variables -->
+
+      <${Card} c="space-y-3">
+
+        <h2 className="font-medium">
+          Environment Variables
+        </h2>
+
+
+        ${
+          ev.map(
+            ([a, b], i) => h`
+              <div
+                key=${i}
+                className="flex gap-2 items-center mono text-sm"
+              >
+
+                <span className="text-sky-300">
+                  ${a}
+                </span>
+
+                <span>=</span>
+
+                <span className="text-slate-400 flex-1 truncate">
+                  ${b}
+                </span>
+
+                <button
+                  type="button"
+                  onClick=${() =>
+                    setEv(
+                      ev.filter(
+                        (_, j) => j != i
+                      )
+                    )
+                  }
+                  className="text-red-400"
+                >
+                  ✕
+                </button>
+
+              </div>
+            `
+          )
+        }
+
+
+        <div className="flex gap-2">
+
+          <input
+            value=${k}
+            onChange=${e =>
+              setK(e.target.value)
+            }
+            placeholder="KEY"
+            className="mono w-1/3 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm"
+          />
+
+
+          <input
+            value=${v}
+            onChange=${e =>
+              setV(e.target.value)
+            }
+            placeholder="VALUE"
+            className="mono flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm"
+          />
+
+
+          <${Btn}
+            v="g"
+            type="button"
+            onClick=${() => {
+
+              if (k) {
+
+                setEv([
+                  ...ev,
+                  [k, v]
+                ]);
+
+                setK('');
+                setV('');
+              }
+
+            }}
+          >
+            Add
+          <//>
+
+        </div>
+
+      <//>
+
+
+      <!-- Deployment Server -->
+
+      <${Card}>
+
+        <${Sel}
+          label="Deployment Server"
+          value=${sv}
+          onChange=${e =>
+            setSv(e.target.value)
+          }
+          opts=${SV.map(
+            s =>
+              s.n +
+              ' — ' +
+              (
+                s.s == 'online'
+                  ? 'Online'
+                  : 'Offline'
+              )
+          )}
+        />
+
+
+        ${
+          er.sv &&
+          h`
+            <p className="text-xs text-red-400 mt-1">
+              ⚠ ${er.sv}
+            </p>
+          `
+        }
+
+      <//>
+
+
+      <!-- Deploy -->
+
+      <${Btn}
+        type="submit"
+        c="w-full py-3 text-base"
+      >
+        🚀 Deploy Application
+      <//>
+
+    </form>
+  `;
+}
+function Pipe({id}){const{toast,addNote}=useContext(Ctx);const[step,setStep]=useState(0);const[logs,setLogs]=useState([]);const box=useRef();const failed=id=='d-1041'||id=='d-1037';const done=id&&!['new','live'].includes(id);
+const ts=()=>new Date().toTimeString().slice(0,8);
+useEffect(()=>{if(done&&!failed)setStep(8)},[]);
+useEffect(()=>{if(done||step>7){if(step==8&&!done)toast('Deployment successful — app is live','success');return}
+if(failed&&step==2){setLogs(l=>[...l,[ts(),'info','Building Docker image...'],[ts(),'error','ERROR: npm install failed — exit code 1']]);toast('Deployment failed at Docker Build','error');return}
+setLogs(l=>[...l,...LG[step].map(x=>[ts(),...x])]);const t=setTimeout(()=>setStep(step+1),1800);return()=>clearTimeout(t)},[step]);
+useEffect(()=>{if(box.current)box.current.scrollTop=box.current.scrollHeight},[logs]);
+const stat=i=>failed&&done?(i<2?'success':i==2?'failed':'pending'):i<step?'success':i==step&&step<8?(failed&&step==2?'failed':'running'):'pending';
+const shown=done?(failed?[[ts(),'info','Building Docker image...'],[ts(),'error','ERROR: npm install failed — exit code 1']]:LG.flat().map(x=>[ts(),...x])):logs;
+const txt=shown.map(l=>`[${l[0]}] ${l[2]}`).join('\n');
+return h`<div className="space-y-5"><div className="flex flex-wrap justify-between gap-2"><div><h1 className="text-2xl font-semibold">CI/CD Pipeline</h1><p className="text-sm text-slate-400 mono">${done?id:'d-1043'} · my-portfolio · main · a3f9c21</p></div><${Badge} s=${stat(0)=='running'||step<8&&!failed?'running':failed?'failed':'success'} l=${failed?'Failed':step<8?'In progress':'Live'}/></div>
+<${Card}><${Chain}/><//>
+<div className="grid lg:grid-cols-5 gap-4"><${Card} c="lg:col-span-2">${ST.map(([n,ic,d],i)=>{const s=stat(i);return h`<div key=${n}><div className="flex items-center gap-3 py-2"><span className=${'w-9 h-9 rounded-lg border flex items-center justify-center '+SC[s]}>${s=='success'?'✓':s=='running'?h`<span className="animate-spin inline-block">⟳</span>`:s=='failed'?'✕':ic}</span><div className="flex-1"><div className="text-sm">${n}</div><div className="text-xs text-slate-500 capitalize">${s=='running'?'Running...':s}</div></div><div className="text-xs mono text-slate-400">${s=='success'?d+'s':s=='pending'?'—':''}</div></div>${i<7&&h`<div className="ml-[17px] h-3 border-l border-slate-700"></div>`}</div>`})}<//>
+<${Card} c="lg:col-span-3 p-0 overflow-hidden"><div className="flex items-center justify-between px-3 py-2 border-b border-slate-800 text-sm"><span>Deployment Logs</span><span className="flex gap-2"><${Btn} v="g" c="!py-0.5 text-xs" onClick=${()=>{navigator.clipboard&&navigator.clipboard.writeText(txt).catch(()=>{});toast('Logs copied','success')}}>Copy<//><${Btn} v="g" c="!py-0.5 text-xs" onClick=${()=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt]));a.download='deploy.log';a.click()}catch(e){toast('Download unavailable here','error')}}}>Download<//></span></div>
+<div ref=${box} className="mono text-xs bg-black/60 p-3 h-96 overflow-auto space-y-0.5">${shown.length?shown.map((l,i)=>h`<div key=${i} className=${l[1]=='error'?'text-red-400':l[1]=='warn'?'text-amber-300':'text-slate-300'}><span className="text-slate-600">[${l[0]}]</span> <b className="font-normal">${l[1]=='error'?'ERR ':l[1]=='warn'?'WARN':'INFO'}</b> ${l[2]}</div>`):h`<span className="text-slate-500">Waiting for runner...</span>`}${step<8&&!failed&&h`<span className="animate-pulse">▍</span>`}</div><//></div>
+${step==8&&!failed&&h`<${Card} c="border-emerald-500/30 flex flex-wrap items-center justify-between gap-3"><span className="text-emerald-400">✓ Application live at https://my-app.autodeploy.app</span><${Btn} onClick=${()=>go('/projects/p1')}>Monitor Application<//><//>`}
+${failed&&(step>=2||done)&&h`<${Card} c="border-red-500/30 flex flex-wrap items-center justify-between gap-3"><span className="text-red-400">✕ Pipeline stopped at Docker Build</span><${Btn} v="g" onClick=${()=>go('/deploy')}>Fix & retry<//><//>`}</div>`}
+
+function Proj({id}){const{toast,ask}=useContext(Ctx);const p=P.find(x=>x.id==id);const[s,setS]=useState(p&&p.st);
+if(!p)return h`<${Empty} t="Project not found"/>`;
+const A=[['Redeploy','g',()=>go('/pipeline/new')],['Restart','g',()=>ask('Restart '+p.name+'?',()=>toast('Restarting container...','success'))],[s=='stopped'?'Start':'Stop','g',()=>ask('Stop '+p.name+'?',()=>{setS('stopped');toast('Application stopped','error')})],['Open Application','g',()=>toast('Opening '+p.url,'success')],['Delete Project','d',()=>ask('Delete '+p.name+'? This cannot be undone.',()=>{toast('Project deleted','error');go('/projects')})]];
+const I=[['Repository',p.repo],['Branch',p.branch],['Latest commit',p.commit],['Docker image',p.img],['Server',p.srv],['Version',p.ver]];
+return h`<div className="space-y-5"><div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold">${p.name}</h1><${Badge} s=${s=='stopped'?'stopped':p.st=='failed'?'failed':'success'} l=${'● '+(s=='stopped'?'STOPPED':p.st=='failed'?'FAILED':'RUNNING')}/></div>
+<div className="flex flex-wrap gap-2">${A.map(([n,v,f])=>h`<${Btn} key=${n} v=${v} onClick=${f}>${n}<//>`)}<${Btn} v="g" onClick=${()=>go('/deployments')}>Deployment History<//><${Btn} v="g" onClick=${()=>go('/pipeline/live')}>View Logs<//></div>
+<div className="grid md:grid-cols-2 gap-4"><${Card}><h2 className="font-medium mb-2">Project information</h2>${I.map(([a,b])=>h`<div key=${a} className="flex justify-between gap-3 py-1.5 text-sm border-t border-slate-800/70 first:border-0"><span className="text-slate-500">${a}</span><span className="mono truncate">${b}</span></div>`)}<//>
+<${Card} c="space-y-3"><h2 className="font-medium">Application status</h2>${[['CPU usage',s=='stopped'?0:p.cpu],['Memory usage',s=='stopped'?0:p.mem]].map(([a,b])=>h`<div key=${a}><div className="flex justify-between text-sm"><span className="text-slate-400">${a}</span>${b}%</div><${Bar} v=${b}/></div>`)}<div className="text-sm flex justify-between"><span className="text-slate-400">Container</span>${s=='stopped'?'exited':p.st=='failed'?'not started':'running'}</div><div className="text-sm flex justify-between"><span className="text-slate-400">Uptime</span>${s=='stopped'?'—':p.up}</div><div className="text-sm flex justify-between"><span className="text-slate-400">Last deployment</span>${D.find(d=>d.p==p.name).t}</div><//></div></div>`}
+
+function Projects(){return h`<div className="space-y-4"><div className="flex justify-between items-center"><h1 className="text-2xl font-semibold">Projects</h1><${Btn} onClick=${()=>go('/deploy')}>＋ New<//></div><div className="grid md:grid-cols-3 gap-4">${P.map(p=>h`<a key=${p.id} href=${'#/projects/'+p.id}><${Card} c="hover:border-indigo-500/60 transition"><div className="flex justify-between"><b>${p.name}</b><${Badge} s=${p.st=='failed'?'failed':'success'} l=${p.st=='failed'?'Failed':'Running'}/></div><div className="text-xs mono text-slate-500 mt-2">${p.repo}</div><div className="text-xs text-slate-400 mt-3">${p.branch} · ${p.ver} · ${p.srv}</div><//></a>`)}</div></div>`}
+
+function Hist(){const[f,setF]=useState('all');const[q,setQ]=useState('');const r=D.filter(d=>(f=='all'||d.s==f)&&(d.p+d.c+d.id).includes(q.toLowerCase()));
+return h`<div className="space-y-4"><h1 className="text-2xl font-semibold">Deployment History</h1><div className="flex flex-wrap gap-2"><input value=${q} onChange=${e=>setQ(e.target.value)} placeholder="Search project, commit, or ID" className="flex-1 min-w-[200px] px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm"/>${['all','success','failed','running'].map(x=>h`<${Btn} key=${x} v=${f==x?'p':'g'} onClick=${()=>setF(x)} c="capitalize">${x}<//>`)}</div><${Card}><${DTable} rows=${r} full=${true}/><//></div>`}
+
+function Servers(){const{toast}=useContext(Ctx);const[o,setO]=useState('Server-01');
+return h`<div className="space-y-4"><h1 className="text-2xl font-semibold">Servers</h1><div className="grid md:grid-cols-3 gap-4">${SV.map(s=>h`<${Card} key=${s.n} c="space-y-2"><div className="flex justify-between"><b>${s.n}</b><${Badge} s=${s.s} l=${(s.s=='online'?'🟢 ':'🔴 ')+s.s}/></div><div className="text-xs text-slate-400 mono">IP: ${s.ip}<br/>OS: ${s.os}<br/>Docker: ${s.s=='online'?'Running':'Unreachable'}<br/>Containers: ${s.c.length}</div>
+${['CPU','RAM'].map(k=>h`<div key=${k}><div className="flex justify-between text-xs"><span>${k}</span>${s[k.toLowerCase()]}%</div><${Bar} v=${s[k.toLowerCase()]}/></div>`)}
+<div className="flex flex-wrap gap-2 pt-1"><${Btn} v="g" c="text-xs" onClick=${()=>toast(s.n+': '+s.os+', '+s.ip,'success')}>Details<//><${Btn} v="g" c="text-xs" onClick=${()=>setO(s.n)}>Containers<//><${Btn} v="g" c="text-xs" onClick=${()=>go('/pipeline/live')}>Logs<//></div><//>`)}</div>
+<${Card}><h2 className="font-medium mb-2">Containers — ${o}</h2>${SV.find(s=>s.n==o).c.length?h`<div className="overflow-x-auto"><table className="w-full text-sm min-w-[480px]">${SV.find(s=>s.n==o).c.map(c=>h`<tr key=${c[0]} className="border-t border-slate-800"><td className="py-2 mono">${c[0]}</td><td className="mono text-slate-400">${c[1]}</td><td><${Badge} s="success" l="Running"/></td><td className="text-right space-x-3 text-indigo-400"><button onClick=${()=>toast('Restarting '+c[0],'success')}>Restart</button><button onClick=${()=>toast('Stopped '+c[0],'error')}>Stop</button><button onClick=${()=>go('/pipeline/live')}>Logs</button></td></tr>`)}</table></div>`:h`<${Empty} t="No containers — server is offline"/>`}<//></div>`}
+
+function Settings(){const{toast}=useContext(Ctx);const T=[['GitHub API token','ghp_••••••••••••a91f'],['Registry secret','••••••••••••••••'],['SSH key (deploy)','SHA256:••••••••3kQ2']];
+const Sec=({t,children})=>h`<${Card} c="space-y-3"><h2 className="font-medium">${t}</h2>${children}<//>`;
+return h`<div className="max-w-2xl mx-auto space-y-4"><h1 className="text-2xl font-semibold">Settings</h1>
+<${Sec} t="Account"><div className="flex items-center gap-3"><div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-xl">D</div><${Btn} v="g" onClick=${()=>toast('Upload dialog not available in demo','error')}>Change picture<//></div><${In} label="Name" defaultValue="Dev User"/><${In} label="Email" defaultValue="dev@example.com"/><//>
+<${Sec} t="GitHub"><div className="flex justify-between items-center text-sm"><span>Connected: <b>@dev-user</b> · 12 repos</span><${Btn} v="d" onClick=${()=>toast('GitHub disconnected','error')}>Disconnect<//></div><//>
+<${Sec} t="Docker Registry"><${In} label="Registry username" defaultValue="devuser"/><${Badge} s="success" l="Connected"/><//>
+<${Sec} t="Deployment Settings"><div className="grid sm:grid-cols-3 gap-3"><${Sel} label="Default server" opts=${['Server-01','Server-02']}/><${Sel} label="Default branch" opts=${['main','develop']}/><${In} label="Default port" defaultValue="8080"/></div><//>
+<${Sec} t="Security">${T.map(([a,b])=>h`<div key=${a} className="flex justify-between text-sm gap-3"><span className="text-slate-400">${a}</span><span className="mono truncate">${b}</span><button className="text-indigo-400" onClick=${()=>toast(a+' rotated','success')}>Rotate</button></div>`)}<//>
+<${Btn} onClick=${()=>toast('Settings saved','success')}>Save changes<//> <${Btn} v="g" onClick=${()=>go('/login')}>Log out<//></div>`}
+
+function App(){const[hash,setH]=useState(location.hash.slice(1)||'/login');const[toasts,setT]=useState([]);const[notes,setNotes]=useState(NT);const[cf,setCf]=useState(null);
+useEffect(()=>{const f=()=>{setH(location.hash.slice(1)||'/login');scrollTo(0,0)};addEventListener('hashchange',f);return()=>removeEventListener('hashchange',f)},[]);
+const toast=(m,k)=>{const id=Math.random();setT(t=>[...t,{id,m,k}]);setTimeout(()=>setT(t=>t.filter(x=>x.id!=id)),3200)};
+const ctx={toast,notes,setNotes,ask:(m,f)=>setCf({m,f})};const seg=hash.split('/');
+let pg;if(hash=='/login'||hash=='/signup')return h`<${Ctx.Provider} value=${ctx}><${Auth} mode=${hash.slice(1)}/><${Toasts} t=${toasts}/><//>`;
+pg=hash=='/'?h`<${Dash}/>`:hash=='/projects'?h`<${Projects}/>`:seg[1]=='projects'?h`<${Proj} id=${seg[2]}/>`:hash=='/deployments'?h`<${Hist}/>`:hash=='/deploy'?h`<${Deploy}/>`:seg[1]=='pipeline'?h`<${Pipe} key=${seg[2]} id=${seg[2]}/>`:hash=='/servers'?h`<${Servers}/>`:hash=='/settings'?h`<${Settings}/>`:h`<${Empty} t="404 — page not found"/>`;
+return h`<${Ctx.Provider} value=${ctx}><div className="min-h-screen bg-g"><${Nav} path=${hash}/><main className="max-w-6xl mx-auto p-4 md:p-6">${pg}</main></div><${Toasts} t=${toasts}/>
+${cf&&h`<div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"><${Card} c="max-w-sm w-full space-y-4 bg-slate-900"><p>${cf.m}</p><div className="flex justify-end gap-2"><${Btn} v="g" onClick=${()=>setCf(null)}>Cancel<//><${Btn} onClick=${()=>{cf.f();setCf(null)}}>Confirm<//></div><//></div>`}<//>`}
+const Toasts=({t})=>h`<div className="fixed bottom-4 right-4 z-[60] space-y-2">${t.map(x=>h`<div key=${x.id} className=${'px-4 py-2 rounded-lg border text-sm bg-slate-900 shadow-lg '+(x.k=='error'?'border-red-500/40 text-red-300':'border-emerald-500/40 text-emerald-300')}>${x.k=='error'?'✕ ':'✓ '}${x.m}</div>`)}</div>`;
+ReactDOM.createRoot(document.getElementById('root')).render(h`<${App}/>`);
+</script></body></html>

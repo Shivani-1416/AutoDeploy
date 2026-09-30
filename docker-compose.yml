@@ -1,0 +1,74 @@
+services:
+
+  # ==========================================
+  # FRONTEND
+  # ==========================================
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: autodeploy-frontend
+
+    ports:
+      - "5173:80"
+
+    depends_on:
+      - backend
+
+    restart: unless-stopped
+
+
+  # ==========================================
+  # FASTAPI BACKEND
+  # ==========================================
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: autodeploy-backend
+
+    ports:
+      - "8000:8000"
+
+    env_file:
+      - ./backend/.env
+
+    depends_on:
+      - jenkins
+
+    restart: unless-stopped
+
+
+  # ==========================================
+  # JENKINS
+  # ==========================================
+
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+
+    container_name: autodeploy-jenkins
+
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./ansible:/etc/ansible/playbooks:ro
+
+    restart: unless-stopped
+
+
+# ==========================================
+# VOLUMES
+# ==========================================
+
+volumes:
+  jenkins_home:
