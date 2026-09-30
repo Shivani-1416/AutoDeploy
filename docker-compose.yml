@@ -1,9 +1,5 @@
 services:
 
-  # ==========================================
-  # FRONTEND
-  # ==========================================
-
   frontend:
     build:
       context: .
@@ -20,10 +16,6 @@ services:
     restart: unless-stopped
 
 
-  # ==========================================
-  # FASTAPI BACKEND
-  # ==========================================
-
   backend:
     build:
       context: ./backend
@@ -34,18 +26,17 @@ services:
     ports:
       - "8000:8000"
 
-    env_file:
-      - ./backend/.env
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_PUBLIC_URL: http://localhost:8080
+      JENKINS_JOB: AutoDeploy-project-job
+      JENKINS_TRIGGER_TOKEN: autodeploy-trigger
 
     depends_on:
       - jenkins
 
     restart: unless-stopped
 
-
-  # ==========================================
-  # JENKINS
-  # ==========================================
 
   jenkins:
     build:
@@ -65,10 +56,6 @@ services:
 
     restart: unless-stopped
 
-
-# ==========================================
-# VOLUMES
-# ==========================================
 
 volumes:
   jenkins_home:
