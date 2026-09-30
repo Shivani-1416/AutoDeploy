@@ -33,6 +33,7 @@ RUN apt-get update && \
 # ==========================================
 
 RUN pip3 install --break-system-packages ansible requests
+
 # ==========================================
 # Install Docker Ansible collection
 # ==========================================
@@ -61,15 +62,19 @@ COPY init.groovy.d/setup.groovy \
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
+# Convert Windows CRLF line endings to Linux LF
+# and make the script executable
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && \
-    chmod +x /usr/local/bin/docker-entrypoint.sh# ==========================================
+    chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# ==========================================
 # Skip Jenkins setup wizard
 # ==========================================
 
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
 
 # ==========================================
-# Start with our entrypoint
+# Start Jenkins through entrypoint
 # ==========================================
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
